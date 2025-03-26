@@ -1,0 +1,6 @@
+{
+  "mode": "ecdh",
+  "is_server": true,
+  "cert_file": "ecdh.crt",
+  "key_file": "ecdh.key"
+}
