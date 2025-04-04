@@ -1,0 +1,29 @@
+{
+  "host": "127.0.0.1",
+  "port": 8443,
+  "handshake_runs": 1000,
+  "mode": {
+    "selected": "hybrid",
+    "classic": "x22519",
+    "pqc": "Kyber768",
+    "hybrid": {
+      "classic": "x22519",
+      "pqc": "Kyber768"
+    }
+  },
+  "time_digits": 10,
+  "logs": {
+    "classic": {
+      "log_file_client": "logs/classic/client_log.csv",
+      "log_file_server": "logs/classic/server_log.csv"
+    },
+    "pqc": {
+      "log_file_client": "logs/pqc/client_log.csv",
+      "log_file_server": "logs/pqc/server_log.csv"
+    },
+    "hybrid": {
+      "log_file_client": "logs/hybrid/client_log.csv",
+      "log_file_server": "logs/hybrid/server_log.csv"
+    }
+  }
+}
