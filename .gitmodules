@@ -1,6 +1,6 @@
-[submodule "liboqs"]
-	path = liboqs
+[submodule "kex-native/liboqs"]
+	path = kex-native/liboqs
 	url = https://github.com/open-quantum-safe/liboqs.git
-[submodule "liboqs-python"]
-	path = liboqs-python
+[submodule "kex-native/liboqs-python"]
+	path = kex-native/liboqs-python
 	url = https://github.com/open-quantum-safe/liboqs-python.git
