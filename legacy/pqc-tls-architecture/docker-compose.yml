@@ -1,0 +1,65 @@
+services:
+  oqs-server:
+    container_name: oqs-server
+    build:
+      context: .
+      dockerfile: ./oqs-server/Dockerfile
+    volumes:
+      - ./logs:/app/logs
+      - ./shared/config.json:/app/config.json
+      - ./verify_kex_support.py:/app/verify_kex_support.py
+    networks:
+      - pqcnet
+
+  oqs-client:
+    container_name: oqs-client
+    build:
+      context: ./oqs-client
+      dockerfile: Dockerfile
+    depends_on:
+      - timestamper
+    volumes:
+      - ./logs:/app/logs
+      - ./shared:/app/shared
+      - ./oqs-certs:/app/oqs-certs
+      - ./verify_kex_support.py:/app/verify_kex_support.py
+    networks:
+      - pqcnet
+
+#  server:
+#    build:
+#      context: .
+#      dockerfile: ./server/Dockerfile
+#    ports:
+#      - "443:443"
+#    volumes:
+#      - ./logs:/app/logs
+#    networks:
+#      - pqcnet
+
+#  client:
+#    build:
+#      context: .
+#      dockerfile: ./client/Dockerfile
+#    depends_on:
+#      - server
+#    volumes:
+#      - ./logs:/app/logs
+#    networks:
+#      - pqcnet
+
+  timestamper:
+    container_name: timestamper
+    build: ./timestamper
+    depends_on:
+      - oqs-server
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - pqcnet
+    command: >
+      sh -c "socat TCP-LISTEN:8443,fork TCP:oqs-server:8443 & python3 timestamper.py"
+
+networks:
+  pqcnet:
+    driver: bridge

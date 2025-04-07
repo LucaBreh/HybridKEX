@@ -1,4 +1,7 @@
-FROM python:3.9
+FROM pqc-base
+
 WORKDIR /app
-COPY client.py .
+COPY . /app
+
+
 CMD ["python3", "client.py"]

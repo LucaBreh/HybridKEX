@@ -1,0 +1,17 @@
+{
+  "mode": "oqs",
+  "is_server": true,
+
+  "cert_file": "server_cert.pem",
+  "key_file": "server_key.pem",
+
+  "oqs": {
+    "signature": "dilithium2",
+    "key_exchange": "x25519_kyber512"
+  },
+
+  "classic": {
+    "key_exchange": "ECDHE",
+    "signature": "RSA"
+  }
+}
