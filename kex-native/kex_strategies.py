@@ -1,12 +1,25 @@
 import oqs
 from nacl.public import PrivateKey, PublicKey, Box
+from crypto_utils import (generate_ecdh_keypair, generate_kyber_keypair,derive_ecdh_shared_secret, derive_kyber_shared_secret, create_hybrid_secret)
+
+def get_kex_strategy(mode:str) -> object:
+    mode = mode.lower()
+    if mode == "classic":
+        return ClassicKEX()
+    elif mode == "pqc":
+        return PQCKEX()
+    elif mode == "hybrid":
+        return HybridKEX()
+    else:
+        raise ValueError(f"Unknown KEX mode: {mode}")
+
+
 
 class ClassicKEX:
     def __init__(self, algorithm="x25519"):
         if algorithm.lower() != "x25519":
             raise ValueError(f"Unsupported classic algorithm: {algorithm}")
-        self.private_key = PrivateKey.generate()
-        self.public_key = self.private_key.public_key
+        self.private_key, self.public_key = generate_ecdh_keypair()
 
     def generate_keys(self):
         priv = self.private_key
@@ -15,8 +28,8 @@ class ClassicKEX:
 
     def compute_shared_secret(self, peer_public_key_bytes: bytes) -> bytes:
         peer_pubkey = PublicKey(peer_public_key_bytes)
-        box = Box(self.private_key, peer_pubkey)
-        return box.shared_key()
+        shared_secret = derive_ecdh_shared_secret(self.private_key, peer_pubkey)
+        return shared_secret
 
 
 class PQCKEX:
@@ -26,12 +39,12 @@ class PQCKEX:
         self.public_key = None
 
     def generate_keys(self):
-        self.kem = oqs.KeyEncapsulation(self.kem_alg)
-        self.public_key = self.kem.generate_keypair()
+        self.kem, self.public_key = generate_kyber_keypair(self.kem_alg)
         return self.kem, self.public_key
 
     def compute_shared_secret(self, ciphertext):
-        return self.kem.decap_secret(ciphertext)
+        derived_shared_secret = derive_kyber_shared_secret(self.kem, ciphertext)
+        return derived_shared_secret
 
 
 class HybridKEX:
@@ -50,7 +63,7 @@ class HybridKEX:
     def compute_shared_secret(self, classic_peer_pub, pqc_ciphertext):
         classic_shared = self.classic.compute_shared_secret(classic_peer_pub)
         pqc_shared = self.pqc.compute_shared_secret(pqc_ciphertext)
-        self.hybrid_key = classic_shared + pqc_shared
+        self.hybrid_key = create_hybrid_secret(classic_shared, pqc_shared)
         return self.hybrid_key
 
 
