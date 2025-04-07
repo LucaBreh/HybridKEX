@@ -1,0 +1,28 @@
+services:
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: kex-server
+    ports:
+      - "8443:8443"
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - kex-net
+
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: kex-client
+    depends_on:
+      - server
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - kex-net
+
+networks:
+  kex-net:
+    driver: bridge
