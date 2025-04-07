@@ -1,0 +1,28 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*.so
+
+# Logs
+*.log
+*.csv
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# Environment files
+.env
+*.env
+
+# Python virtualenv
+venv/
+env/
+
+# Certificates and keys
+*.crt
+*.key
+*.pem
+
+# Docker-related
+*.pid
+
