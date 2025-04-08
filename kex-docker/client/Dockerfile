@@ -5,24 +5,30 @@ RUN apt-get update && apt-get install -y \
     git cmake build-essential libssl-dev libtool autoconf pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
-# Build liboqs
+# Build liboqs (shared library!)
 WORKDIR /opt
-RUN git clone --branch main https://github.com/open-quantum-safe/liboqs.git
+RUN git clone --depth 1 https://github.com/open-quantum-safe/liboqs.git
 WORKDIR /opt/liboqs
-RUN cmake -S . -B build && cmake --build build && make install
+RUN cmake -S . -B build -DBUILD_SHARED_LIBS=ON \
+ && cmake --build build --parallel $(nproc) \
+ && cmake --install build
 
-# Build oqs-python
+# Make liboqs visible to dynamic linker
+ENV LD_LIBRARY_PATH=/usr/local/lib
+
+# Build and install oqs-python
 WORKDIR /opt
-RUN git clone https://github.com/open-quantum-safe/oqs-python.git
-WORKDIR /opt/oqs-python
-RUN python3 setup.py build
-RUN python3 setup.py install
+RUN git clone --depth 1 https://github.com/open-quantum-safe/liboqs-python.git
+WORKDIR /opt/liboqs-python
+RUN pip install cmake ninja
+RUN pip install .
 
-# Install Python deps
-RUN pip install pynacl psutil
+# Python deps
+RUN pip install pynacl psutil hkdf
 
 # App
 WORKDIR /app
-COPY client.py config.json ./
+COPY client/client.py ./
+COPY shared /app/shared
 
 CMD ["python3", "client.py"]
