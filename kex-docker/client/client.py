@@ -17,7 +17,7 @@ import nacl.public
 from shared.kex_strategies import get_kex_strategy
 from shared.crypto_utils import *
 
-CONFIG_PATH = Path(__file__).resolve().parent / "shared" / "config.json"
+CONFIG_PATH = Path(__file__).resolve().parent / "config.json"
 
 runs, mode, log_file, round_to_n_digits, HOST, PORT = get_config_vars(CONFIG_PATH, is_client=True)
 

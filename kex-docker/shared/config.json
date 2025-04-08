@@ -1,9 +1,9 @@
 {
   "host": "server",
   "port": 8443,
-  "handshake_runs": 5,
+  "handshake_runs": 1000,
   "mode": {
-    "selected": "classic",
+    "selected": "hybrid",
     "classic": "x22519",
     "pqc": "Kyber768",
     "hybrid": {

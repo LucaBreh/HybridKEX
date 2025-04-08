@@ -28,8 +28,12 @@ RUN pip install pynacl psutil hkdf
 
 # App
 WORKDIR /app
+
+RUN mkdir -p /app/shared
+
 COPY server/server.py ./
-COPY shared /app/shared
+COPY shared/*.py /app/shared/
+COPY shared/__init__.py /app/shared/__init__.py
 
 
 CMD ["python3", "server.py"]
