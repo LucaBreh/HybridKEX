@@ -4,6 +4,7 @@ import oqs
 import nacl.public
 from hashlib import sha256
 from hkdf import Hkdf
+import subprocess
 
 def generate_ecdh_keypair():
     private_key = nacl.public.PrivateKey.generate()
@@ -53,4 +54,29 @@ def get_config_vars(config_path, is_client):
 
     return runs, mode, log_file, round_to_n_digits, host, port
 
+def get_netem_params(config_path):
+    with open(config_path, "r") as f:
+        config = json.load(f)
+
+    netem = config.get("netem", {})
+    netem.setdefault("enabled", False)
+    netem.setdefault("delay", "0ms")
+    netem.setdefault("loss", "0%")
+    netem.setdefault("rate", "")
+    netem.setdefault("burst", "32kbit")
+    netem.setdefault("latency", "400ms")
+
+    return netem
+
+def set_up_netem(netem_config):
+    netem_selected = netem_config[netem_config["selected"]]
+    delay_cmd = f"tc qdisc add dev eth0 root handle 1: netem delay {netem_selected['delay']} loss {netem_selected['loss']}"
+    subprocess.run(delay_cmd, shell=True, check=False)
+
+    if "rate" in netem_selected and netem_selected["rate"]:
+        tbf_cmd = (
+            f"tc qdisc add dev eth0 parent 1: handle 2: tbf rate {netem_selected['rate']} "
+            f"burst {netem_selected['burst']} latency {netem_selected['latency']}"
+        )
+        subprocess.run(tbf_cmd, shell=True, check=False)
 

@@ -2,8 +2,9 @@ FROM python:3.10-slim
 
 # System packages
 RUN apt-get update && apt-get install -y \
-    git cmake build-essential libssl-dev libtool autoconf pkg-config \
+    git cmake build-essential libssl-dev libtool autoconf pkg-config iproute2 \
     && rm -rf /var/lib/apt/lists/*
+
 
 # Build liboqs (shared library!)
 WORKDIR /opt

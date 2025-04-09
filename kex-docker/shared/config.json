@@ -3,7 +3,7 @@
   "port": 8443,
   "handshake_runs": 1000,
   "mode": {
-    "selected": "hybrid",
+    "selected": "pqc",
     "classic": "x22519",
     "pqc": "Kyber768",
     "hybrid": {
@@ -25,5 +25,53 @@
       "log_file_client": "logs/hybrid/client_log.csv",
       "log_file_server": "logs/hybrid/server_log.csv"
     }
+  },
+
+  "netem": {
+    "enabled": true,
+    "selected": "netem_mobile",
+    "netem_custom": {
+      "delay": "400ms",
+      "loss": "2%",
+      "rate": "1mbit",
+      "burst": "32kbit",
+      "latency": "400ms"
+    },
+    "netem_mobile": {
+      "delay": "150ms",
+      "loss": "3%",
+      "rate": "700kbit",
+      "burst": "32kbit",
+      "latency": "500ms"
+    },
+    "netem_lan": {
+      "delay": "200ms",
+      "loss": "0%",
+      "rate": "",
+      "burst": "",
+      "latency": ""
+    },
+    "netem_package_loss": {
+      "delay": "50ms",
+      "loss": "10%",
+      "rate": "",
+      "burst": "",
+      "latency": ""
+    },
+    "netem_good_wlan": {
+      "delay": "30ms",
+      "loss": "0.5%",
+      "rate": "5mbit",
+      "burst": "64kbit",
+      "latency": "200ms"
+    },
+    "netem_satelite": {
+      "delay": "30ms",
+      "loss": "0.5%",
+      "rate": "5mbit",
+      "burst": "64kbit",
+      "latency": "200ms"
+    }
   }
+
 }
