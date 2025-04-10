@@ -26,9 +26,8 @@
       "log_file_server": "logs/hybrid/server_log.csv"
     }
   },
-
   "netem": {
-    "enabled": true,
+    "enabled": false,
     "selected": "netem_mobile",
     "netem_custom": {
       "delay": "400ms",
@@ -73,5 +72,4 @@
       "latency": "200ms"
     }
   }
-
 }

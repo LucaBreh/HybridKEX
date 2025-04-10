@@ -85,7 +85,7 @@ with open(log_file, "w") as csvfile:
                         writer.writerow(
                             [run, mode, str(round(duration, round_to_n_digits)), len(shared), cpu, ram, 1, netem_config["selected"]])
                     else:
-                        writer.writerow([run, mode, str(round(duration, round_to_n_digits)), len(shared), cpu, ram, 1, ""])
+                        writer.writerow([run, mode, str(round(duration, round_to_n_digits)), len(shared), cpu, ram, 1, netem_config["enabled"]])
                     print(f"[OK] Run {run} complete. Shared secret length: {len(shared)}", flush=True)
                 except Exception as e:
                     writer.writerow([run, mode, "", "", "", "", 0, str(e), netem_config["selected"]])
