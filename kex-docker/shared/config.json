@@ -1,7 +1,7 @@
 {
   "host": "server",
   "port": 8443,
-  "handshake_runs": 1000,
+  "handshake_runs": 10,
   "mode": {
     "selected": "pqc",
     "classic": "x22519",
@@ -27,14 +27,14 @@
     }
   },
   "netem": {
-    "enabled": false,
+    "enabled": true,
     "selected": "netem_mobile",
     "netem_custom": {
-      "delay": "400ms",
-      "loss": "2%",
-      "rate": "1mbit",
-      "burst": "32kbit",
-      "latency": "400ms"
+      "delay": "",
+      "loss": "",
+      "rate": "",
+      "burst": "",
+      "latency": ""
     },
     "netem_mobile": {
       "delay": "150ms",
@@ -58,18 +58,18 @@
       "latency": ""
     },
     "netem_good_wlan": {
-      "delay": "30ms",
-      "loss": "0.5%",
-      "rate": "5mbit",
+      "delay": "20ms",
+      "loss": "0.2%",
+      "rate": "10mbit",
       "burst": "64kbit",
-      "latency": "200ms"
+      "latency": "50ms"
     },
     "netem_satelite": {
-      "delay": "30ms",
-      "loss": "0.5%",
-      "rate": "5mbit",
-      "burst": "64kbit",
-      "latency": "200ms"
+      "delay": "600ms",
+      "loss": "1%",
+      "rate": "1mbit",
+      "burst": "16kbit",
+      "latency": "800ms"
     }
   }
 }
