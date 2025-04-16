@@ -3,58 +3,71 @@
 set -e
 set -x
 
-# define variables
-# Set KEM to one defined in https://github.com/open-quantum-safe/openssl#key-exchange
-# ENV variables
-[[ -z "$KEM_ALG" ]] && echo "Need to set KEM_ALG" && exit 1;
-[[ -z "$SIG_ALG" ]] && echo "Need to set SIG_ALG" && exit 1;
-[[ -z "$MEASUREMENT_TIME" ]] && echo "Need to set MEASUREMENT_TIME" && exit 1;
+source /opt/shared/read_config.sh
+source /opt/shared/utils.sh
 
-if [[ ! -z "$NETEM_TC" ]]; then
-  PORT=eth0
-  eval "tc qdisc add dev $PORT root netem $NETEM_TC"
+echo "Available Curves:"
+AVAILABLE_CIPHERS=$(${OPENSSL} ciphers -v 2>/dev/null | grep kyber || true)
+echo "$AVAILABLE_CIPHERS"
+
+
+if [ ! -f "/out/$LOG_CLIENT" ]; then
+  echo "run,mode,duration_sec,shared_secret_length,cpu_percent,ram_percent,success,error" > "/out/$LOG_CLIENT"
 fi
 
-SERVER_IP="$(dig +short server)"
-
-DATETIME=$(date +"%F_%T")
-
+#SERVER_IP="$(dig +short server)"
+SERVER_IP="server"
 CA_DIR="/opt/shared"
-
 cd "$OPENSSL_PATH" || exit
 
-echo "Running $0 with SIG_ALG=$SIG_ALG and KEM_ALG=$KEM_ALG"
-
-if [ "$CPU_PROFILING" = "True" ]; then
-  echo "Will export cpu profiling"
-  FG_FREQUENCY=96
-  bash -c "perf record -o /out/perf-client.data -F ${FG_FREQUENCY} -C 1 -g" &
-  PERF_PID=$!
-fi
-
-bash -c "tcpdump -w /out/latencies-post_run${RUN}.pcap src host $SERVER_IP and src port 4433" &
-TCPDUMP_PID=$!
-
-echo "{\"tc\": \"$NETEM_TC\", \"kem_alg\": \"$KEM_ALG\", \"sig_alg\": \"$SIG_ALG\"}" > "/out/${DATETIME}_client_run${RUN}.loop"
+echo  "${RUNS} runs."
 
 sleep 5
 
-# Run handshakes for $TEST_TIME seconds
-bash -c "taskset -c 1 ${OPENSSL} s_time -curves $KEM_ALG  -connect $SERVER_IP:4433 -new -time $MEASUREMENT_TIME -verify 1 -www '/' -CAfile $CA_DIR/CA.crt > /out/opensslclient_run${RUN}.stdout 2> /out/opensslclient_run${RUN}.stderr"
+for ((RUN=1; RUN<=${RUNS}; RUN++)); do
+  echo "➡️ Run $RUN"
+  START=$(date +%s.%N)
+  LOGFILE="/out/openssl_run${RUN}.log"
 
-if [ "$CPU_PROFILING" = "True" ]
-then
-    kill $PERF_PID
+  if [[ "$MODE" == "classic" ]]; then
+  CURVE_ARGS=""
+else
+  CURVE_ARGS="-curves $KEM_ALG"
 fi
 
-sleep 30  # Make sure it is finished and written out
-
-kill -2 $TCPDUMP_PID
-
-if [ "$CPU_PROFILING" = "True" ]
+if ! taskset -c 1 ${OPENSSL} s_client \
+  $CURVE_ARGS -connect $SERVER_IP:$PORT \
+  -verify 1 -CAfile $CA_DIR/CA.crt \
+  < /dev/null > "$LOGFILE" 2>&1
 then
-    perf archive /out/perf-client.data
-    echo "CPU profiling data can be found at /out/perf-client.data"
+  success=0
+  error_msg="Handshake failed (openssl error) on run $RUN"
+else
+  if grep -q "Verify return code: 0 (ok)" "$LOGFILE"; then
+    success=1
+    error_msg=""
+  else
+    success=0
+    error_msg="Handshake failed (verify != 0) on run $RUN"
+  fi
 fi
 
-echo "client finished sending $(date), results can be found at /out/results-openssl-$KEM_ALG-$SIG_ALG.txt"
+  if grep -q "Verify return code: 0 (ok)" "$LOGFILE"; then
+    success=1
+    error_msg=""
+  else
+    success=0
+    error_msg="Handshake failed on run $RUN"
+  fi
+
+  END=$(date +%s.%N)
+  DURATION=$(echo "$END - $START" | bc)
+  CPU=$(ps -p $$ -o %cpu= | xargs)
+  RAM=$(free | awk '/Mem:/ { printf "%.2f", $3/$2 * 100.0 }')
+  SHARED_SECRET_LENGTH=32
+
+  write_log_entry "$RUN" "$MODE" "$DURATION" "$SHARED_SECRET_LENGTH" "$CPU" "$RAM" "$success" "$error_msg" "/out/$LOG_CLIENT"
+  sleep 1
+done
+
+echo "Finished all ${RUNS} runs."

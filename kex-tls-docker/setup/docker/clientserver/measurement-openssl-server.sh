@@ -1,69 +1,80 @@
 #!/bin/bash
 
+echo "HERE"
+
 set -e
 set -x
 
-# Set KEM to one defined in https://github.com/open-quantum-safe/openssl#key-exchange
-[[ -z "$KEM_ALG" ]] && echo "Need to set KEM_ALG" && exit 1;
-[[ -z "$SIG_ALG" ]] && echo "Need to set SIG_ALG" && exit 1;
+source /opt/shared/read_config.sh
+source /opt/shared/utils.sh
+
+if [ ! -f "/out/$LOG_SERVER" ]; then
+  echo "run,mode,duration_sec,shared_secret_length,cpu_percent,ram_percent,success,error" > "/out/$LOG_SERVER"
+fi
+
+[[ -z "$KEM_ALG" ]] && echo "Need to set KEM_ALG" && exit 1
+[[ -z "$SIG_ALG" ]] && echo "Need to set SIG_ALG" && exit 1
 
 if [[ ! -z "$NETEM_TC" ]]; then
-  PORT=eth0
-  eval "tc qdisc add dev $PORT root netem $NETEM_TC"
+  NETIF=eth0
+  eval "tc qdisc add dev $NETIF root netem $NETEM_TC"
 fi
 
 SERVER_IP="$(dig +short server)"
-DATETIME=$(date +"%F_%T")
-
 CA_DIR="/opt/shared/"
+cd "${OPENSSL_PATH}/bin" || exit
 
-cd "${OPENSSL_PATH}"/bin
-# generate CA key and cert
-
-${OPENSSL} req -x509 -new -newkey "${SIG_ALG}" -keyout CA.key -out CA.crt -nodes -subj "/CN=oqstest CA" -days 365 -config "${OPENSSL_CNF}"
-
-cp CA.crt $CA_DIR
-
-cp CA.crt /out/CA_run${RUN}.crt
-cp CA.key /out/CA_run${RUN}.key
-SERVER_CRT=/out/server_run${RUN}
-
-# Optionally set server certificate alg to one defined in https://github.com/open-quantum-safe/openssl#authentication
-# The root CA's signature alg remains as set when building the image
-
-# generate new server CSR using pre-set CA.key & cert
-${OPENSSL} req -new -newkey "${SIG_ALG}" -keyout $SERVER_CRT.key -out $SERVER_CRT.csr -nodes -subj "/CN=$IP"
-# generate server cert
-${OPENSSL} x509 -req -in $SERVER_CRT.csr -out $SERVER_CRT.crt -CA CA.crt -CAkey CA.key -CAcreateserial -days 365
-
-echo "starting experiment: $(date)"
-
-echo "Server has IP $SERVER_IP"
-
-echo "{\"tc\": \"$NETEM_TC\", \"kem_alg\": \"$KEM_ALG\", \"sig_alg\": \"$SIG_ALG\"}" > "/out/${DATETIME}_server_run${RUN}.loop"
-
-bash -c "tcpdump -w /out/latencies-pre_run${RUN}.pcap dst host $SERVER_IP and dst port 4433" &
-TCPDUMP_PID=$!
-
-if [ "$CPU_PROFILING" = "True" ]
-then
-  echo "will save cpu profiling"
-  FG_FREQUENCY=96
-  bash -c "perf record -o /out/perf-dut.data -F ${FG_FREQUENCY} -C 1 -g" &
-  PERF_PID=$!
+if [[ "$SIG_ALG" == rsa:* ]]; then
+  KEYALG="rsa"
+  KEYSIZE=$(echo "$SIG_ALG" | cut -d':' -f2)
+  KEYOPT="-newkey rsa:${KEYSIZE}"
+else
+  KEYOPT="-newkey ${SIG_ALG}"
 fi
 
-# Start a TLS1.3 test server based on OpenSSL accepting only the specified KEM_ALG
-bash -c "taskset -c 1 ${OPENSSL} s_server -cert $SERVER_CRT.crt -key $SERVER_CRT.key -curves $KEM_ALG -www -tls1_3 -accept $CLIENT_IP:4433"
+${OPENSSL} req -new ${KEYOPT} -keyout ${SERVER_CRT}.key -out ${SERVER_CRT}.csr \
+  -nodes -subj "/CN=$IP"
 
-sleep 30
+for ((RUN=1; RUN<=${RUNS}; RUN++)); do
+  echo "➡️ Run $RUN"
+  SERVER_CRT="/tmp/server_run${RUN}"
 
-kill -2 $TCPDUMP_PID
+  ${OPENSSL} req -new -newkey "${SIG_ALG}" -keyout ${SERVER_CRT}.key -out ${SERVER_CRT}.csr -nodes -subj "/CN=$IP"
+  ${OPENSSL} x509 -req -in ${SERVER_CRT}.csr -out ${SERVER_CRT}.crt -CA "$CA_DIR/CA.crt" -CAkey "$CA_DIR/CA.key" -CAcreateserial -days 365
 
-if [ "$CPU_PROFILING" = "True" ]
-then
-    kill $PERF_PID
-    sleep 30
-    perf archive /out/perf-client.data
-    echo "CPU profiling data can be found at /out/perf-client.data"
+  START=$(date +%s.%N)
+  echo "➡️ Starte s_server auf Port $PORT (Run $RUN)..."
+
+  if [[ "$MODE" == "classic" ]]; then
+  CURVE_ARGS=""
+else
+  CURVE_ARGS="-curves $KEM_ALG"
 fi
+
+if ! timeout 20s taskset -c 1 ${OPENSSL} s_server \
+    -cert ${SERVER_CRT}.crt -key ${SERVER_CRT}.key \
+    $CURVE_ARGS -www -tls1_3 -accept $PORT -naccept 1 -msg -debug
+
+  then
+      echo "❌ Fehler hier"
+      ERROR_MSG="Server failed or timed out on run $RUN"
+      write_log_entry "$RUN" "$MODE" "" "" "" "" 0 "$ERROR_MSG" "/out/$LOG_SERVER"
+      continue
+  else
+      echo "✅ s_server für Run $RUN erfolgreich beendet"
+  fi
+
+
+
+  END=$(date +%s.%N)
+  DURATION=$(echo "$END - $START" | bc)
+
+  CPU=$(ps -p $$ -o %cpu= | xargs)
+  RAM=$(free | awk '/Mem:/ { printf "%.2f", $3/$2 * 100.0 }')
+  SHARED_SECRET_LENGTH=32
+
+  write_log_entry "$RUN" "$MODE" "$DURATION" "$SHARED_SECRET_LENGTH" "$CPU" "$RAM" 1 "" "/out/$LOG_SERVER"
+
+done
+
+echo "✅ Finished all ${RUNS} server runs."

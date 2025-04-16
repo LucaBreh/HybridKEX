@@ -1,44 +1,26 @@
 #!/usr/bin/env bash
 
-[[ -z "$KEM_ALG" ]] && echo "Need to set KEM_ALG" && exit 1;
-[[ -z "$SIG_ALG" ]] && echo "Need to set SIG_ALG" && exit 1;
-[[ -z "$RUN" ]] && echo "Need to set RUN" && exit 1;
-[[ -z "$HOST_DIR" ]] && echo "Need to set HOST_DIR" && exit 1;
+set -e
+set -x
 
-COMPOSE_FILE=../docker-compose.yml
+source ../shared/read_config.sh
+export COMPOSE_FILE=../docker-compose.yml
 
-# Cleanup containers
-docker --log-level ERROR compose -f $COMPOSE_FILE down --volumes
 
-echo "Building docker images..."
-docker --log-level ERROR compose -f $COMPOSE_FILE build --quiet
+echo "🚀 Building Docker images..."
+docker compose -f "$COMPOSE_FILE" build
 
-# Start Test Server detached
-docker --log-level ERROR compose -f $COMPOSE_FILE up -d server
 
-# Wait until server has started
-until docker --log-level ERROR compose -f $COMPOSE_FILE logs server | grep -q "ACCEPT";
-do
-  sleep 1;
-done
+echo "🟢 Starting server and client..."
+docker compose -f "$COMPOSE_FILE" up -d server client
 
-# Run client until it has finished
-docker --log-level ERROR compose -f $COMPOSE_FILE up --exit-code-from client client
-e=$?
 
-# Save client log
-docker --log-level ERROR compose -f $COMPOSE_FILE logs client > $HOST_DIR/client/run${RUN}.log
+echo "⏱ Waiting for client to finish ${RUNS} runs..."
+docker wait client
 
-# Now we can kill the server
-docker --log-level ERROR compose -f $COMPOSE_FILE stop server
 
-# Save server logs
-docker --log-level ERROR compose -f $COMPOSE_FILE logs server > $HOST_DIR/server/run${RUN}.log
+echo "📦 Logs wurden direkt nach $HOST_DIR geschrieben."
 
-# Compress pcaps and move them to the timestamper directory
-docker --log-level ERROR compose -f $COMPOSE_FILE up post-processor
 
-# Cleanup containers
-docker --log-level ERROR compose -f $COMPOSE_FILE down --volumes
-
-exit $e
+#echo "🧼 Stopping and cleaning up..."
+#docker compose down

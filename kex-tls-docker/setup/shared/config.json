@@ -1,0 +1,71 @@
+{
+  "host": "server",
+  "port": 8443,
+  "handshake_runs": 5,
+  "cpu_profiling": false,
+  "measurement_time": 60,
+  "mode": {
+    "selected": "hybrid",
+    "classic": {
+      "kem": "x25519",
+      "sig": "rsa:2048"
+    },
+    "pqc": {
+      "kem": "kyber768",
+      "sig": "dilithium2"
+    },
+    "hybrid": {
+      "kem_classic": "p384",
+      "kem_pqc": "kyber768",
+      "sig_kem": "dilithium2",
+      "sig_pqc": "rsa:2048"
+    }
+  },
+  "time_digits": 10,
+  "netem": {
+    "enabled": false,
+    "selected": "netem_mobile",
+    "netem_custom": {
+      "delay": "",
+      "loss": "",
+      "rate": "",
+      "burst": "",
+      "latency": ""
+    },
+    "netem_mobile": {
+      "delay": "150ms",
+      "loss": "3%",
+      "rate": "700kbit",
+      "burst": "32kbit",
+      "latency": "500ms"
+    },
+    "netem_lan": {
+      "delay": "200ms",
+      "loss": "0%",
+      "rate": "",
+      "burst": "",
+      "latency": ""
+    },
+    "netem_package_loss": {
+      "delay": "50ms",
+      "loss": "10%",
+      "rate": "",
+      "burst": "",
+      "latency": ""
+    },
+    "netem_good_wlan": {
+      "delay": "20ms",
+      "loss": "0.2%",
+      "rate": "10mbit",
+      "burst": "64kbit",
+      "latency": "50ms"
+    },
+    "netem_satelite": {
+      "delay": "600ms",
+      "loss": "1%",
+      "rate": "1mbit",
+      "burst": "16kbit",
+      "latency": "800ms"
+    }
+  }
+}

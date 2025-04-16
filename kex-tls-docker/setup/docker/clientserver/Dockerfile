@@ -19,7 +19,9 @@ RUN apt-get install -y build-essential iproute2 \
             libtool automake autoconf cmake ninja-build dnsutils tcpdump \
             make \
             openssl libssl-dev \
-            git wget libpcre3 libpcre3-dev
+            git wget libpcre3 libpcre3-dev \
+            jq bc
+
 
 RUN mkdir -p /opt $OPENSSL_PATH $OPENSSL_SRC_PATH /out
 WORKDIR /opt

@@ -1,9 +1,8 @@
-version: "3.8"
-
 services:
   client:
+    container_name: "client"
     build:
-      context: docker/clientserver
+      context: ./docker/clientserver
       args:
         OPENSSL_REPO: "https://github.com/tumi8/openssl-pqc.git"
         OPENSSL_BRANCH: "basic-sphincs-psh"
@@ -14,20 +13,22 @@ services:
     environment:
       - KEM_ALG=${KEM_ALG}
       - SIG_ALG=${SIG_ALG}
-      - RUN=${RUN}
       - MEASUREMENT_TIME=60
       - CPU_PROFILING=${CPU_PROFILING}
       - NETEM_TC=${NETEM_TC}
     volumes:
-      - type: volume
-        source: cert-data
-        target: /opt/shared
+      - cert-data:/opt/shared
       - type: bind
         source: ${HOST_DIR}/client
         target: /out
+      - type: bind
+        source: ./shared
+        target: /opt/shared
+
   server:
+    container_name: "server"
     build:
-      context: docker/clientserver
+      context: ./docker/clientserver
       args:
         OPENSSL_REPO: "https://github.com/tumi8/openssl-pqc.git"
         OPENSSL_BRANCH: "basic-sphincs-psh"
@@ -38,51 +39,16 @@ services:
     environment:
       - KEM_ALG=${KEM_ALG}
       - SIG_ALG=${SIG_ALG}
-      - RUN=${RUN}
       - CPU_PROFILING=${CPU_PROFILING}
       - NETEM_TC=${NETEM_TC}
     volumes:
-      - type: volume
-        source: cert-data
-        target: /opt/shared
+      - cert-data:/opt/shared
       - type: bind
         source: ${HOST_DIR}/server
         target: /out
-  post-processor:
-    build: docker/post-processor
-    entrypoint: ["/opt/run.sh", "/srv/client/latencies-post_run${RUN}.pcap", "/srv/server/latencies-pre_run${RUN}.pcap"]
-    environment:
-      - RUN=${RUN}
-    volumes:
       - type: bind
-        source: ${HOST_DIR}
-        target: /srv/
-  pre-analyzer:
-    build:
-      context: .
-    environment:
-      - CPU_PROFILING=${CPU_PROFILING}
-      - PARALLEL_JOBS=100%
-    volumes:
-      - type: bind
-        source: ${HOST_DIR}
-        target: /srv/
-      - type: bind
-        source: ${OUT_DIR}
-        target: /out/
-  final-analyzer:
-    build: finalization
-    environment:
-      - EXPERIMENT=${EXPERIMENT}
-      - CPU_PROFILING=${CPU_PROFILING}
-      - DEVIATION_ANALYSIS=${DEVIATION_ANALYSIS}
-    volumes:
-      - type: bind
-        source: ${HOST_DIR}
-        target: /srv/
-      - type: bind
-        source: ${OUT_DIR}
-        target: /out/
+        source: ./shared
+        target: /opt/shared
 
 volumes:
   cert-data:
