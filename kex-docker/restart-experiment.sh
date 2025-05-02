@@ -1,5 +1,5 @@
 #!/bin/bash
-echo "Reloading config.json and starting experiment..."
+echo "Restarting experiment..."
 
 docker-compose stop client
 
