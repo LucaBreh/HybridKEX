@@ -1,6 +1,6 @@
 #!/bin/bash
 
-CONFIG_PATH="./shared/config.json"
+CONFIG_PATH="./config.json"
 MODES=("classic" "pqc" "hybrid")
 
 for mode in "${MODES[@]}"
