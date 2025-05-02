@@ -1,16 +1,28 @@
 #!/bin/bash
 
-echo "[*] start server..."
-python3 server.py &
-SERVER_PID=$!
+CONFIG_PATH="./shared/config.json"
+MODES=("classic" "pqc" "hybrid")
 
-# wait for server to be ready
-sleep 1
+for mode in "${MODES[@]}"
+do
+    echo "[*] Updating config to mode: $mode"
+    jq --arg mode "$mode" '.mode.selected = $mode' "$CONFIG_PATH" > tmp_config.json && mv tmp_config.json "$CONFIG_PATH"
 
-echo "[*] start client..."
-python3 client.py
+    echo "[*] Starting server for mode: $mode..."
+    python3 server.py &
+    SERVER_PID=$!
 
-# wait for client to be ready
-wait $SERVER_PID
+    # wait for server to be ready
+    sleep 1
 
-echo "[✓] experiment finished."
+    echo "[*] Starting client for mode: $mode..."
+    python3 client.py
+
+    # wait for client to finish and terminate server
+    wait $SERVER_PID
+
+    echo "[✓] Mode '$mode' finished."
+    echo ""
+done
+
+echo "[✓✓] All experiments finished."
