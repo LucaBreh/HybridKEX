@@ -3,10 +3,10 @@ import csv
 import time
 import struct
 import psutil
-from kex_strategies import get_kex_strategy
-from crypto_utils import *
+from shared.kex_strategies import get_kex_strategy
+from shared.crypto_utils import *
 
-runs, mode, log_file, round_to_n_digits, HOST, PORT = get_config_vars("config.json", is_client=True)
+runs, mode, log_file, round_to_n_digits, HOST, PORT = get_config_vars("shared/config.json", is_client=True)
 
 strategy = get_kex_strategy(mode=mode)
 
