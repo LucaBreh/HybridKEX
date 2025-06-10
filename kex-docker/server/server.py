@@ -1,7 +1,6 @@
 import sys
 from pathlib import Path
 
-# Add /app (Root im Container) to import path so "shared" module works
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import socket
@@ -13,7 +12,6 @@ import psutil
 import oqs
 import nacl.public
 
-# Custom shared modules
 from shared.kex_strategies import get_kex_strategy
 from shared.crypto_utils import *
 import subprocess

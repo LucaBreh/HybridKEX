@@ -12,13 +12,11 @@ do
     python3 server.py &
     SERVER_PID=$!
 
-    # wait for server to be ready
     sleep 1
 
     echo "[*] Starting client for mode: $mode..."
     python3 client.py
 
-    # wait for client to finish and terminate server
     wait $SERVER_PID
 
     echo "[✓] Mode '$mode' finished."

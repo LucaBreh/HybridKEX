@@ -13,7 +13,6 @@ import psutil
 import oqs
 import nacl.public
 
-# Custom shared modules
 from shared.kex_strategies import get_kex_strategy
 from shared.crypto_utils import *
 
