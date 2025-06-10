@@ -1,8 +1,5 @@
 import socket
-import json
 import csv
-import nacl.public
-import oqs
 import time
 import struct
 import psutil

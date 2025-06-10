@@ -1,9 +1,6 @@
 import socket
-import json
 import csv
 import time
-import oqs
-import nacl.public
 import struct
 import psutil
 from kex_strategies import get_kex_strategy
