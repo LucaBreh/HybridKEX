@@ -6,17 +6,21 @@ import psutil
 from shared.kex_strategies import get_kex_strategy
 from shared.crypto_utils import *
 
-runs, mode, log_file, round_to_n_digits, HOST, PORT = get_config_vars("shared/config.json", is_client=True)
+runs, mode, log_file, round_to_n_digits, HOST, PORT = get_config_vars("config.json", is_client=True)
 
 strategy = get_kex_strategy(mode=mode)
 
+num_cpus = psutil.cpu_count(logical=True)
 
 with open(log_file, "w") as csvfile:
     writer = csv.writer(csvfile)
-    writer.writerow(["run", "mode", "duration_sec", "shared_secret_length", "cpu_percent", "ram_percent", "success", "error"])
+    writer.writerow(["run", "mode", "duration_sec", "shared_secret_length", "cpu_percent", "ram_mb", "success", "error"])
 
     for run in range(1, runs + 1):
         try:
+            process = psutil.Process(os.getpid())
+            start_cpu = process.cpu_times()
+
             start_time = time.time()
             keys = strategy.generate_keys()
 
@@ -51,11 +55,19 @@ with open(log_file, "w") as csvfile:
                     )
                     sock.sendall(packed)
 
-            duration = time.time() - start_time
-            cpu = psutil.cpu_percent(interval=None)
-            ram = psutil.virtual_memory().percent
+            end_time = time.time()
+            duration = end_time - start_time
 
-            writer.writerow([run, mode, str(round(duration, round_to_n_digits)), len(shared), cpu, ram, 1, ""])
+            end_cpu = process.cpu_times()
+            duration = end_time - start_time
+            user_time = end_cpu.user - start_cpu.user
+            system_time = end_cpu.system - start_cpu.system
+            cpu_total = user_time + system_time
+            cpu_percent = ((cpu_total / duration) * 100) / num_cpus if duration > 0 else 0
+
+            ram_mb = process.memory_info().rss / (1024 * 1024)
+
+            writer.writerow([run, mode, str(round(duration, round_to_n_digits)), len(shared), cpu_percent, ram_mb, 1, ""])
 
             print(f"[OK] Run {run} complete. Shared secret length: {len(shared)}")
 

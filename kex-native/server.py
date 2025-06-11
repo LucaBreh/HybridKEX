@@ -7,13 +7,15 @@ from shared.kex_strategies import get_kex_strategy
 from shared.crypto_utils import *
 
 
-runs, mode, log_file, round_to_n_digits, HOST, PORT = get_config_vars("shared/config.json", is_client=False)
+runs, mode, log_file, round_to_n_digits, HOST, PORT = get_config_vars("config.json", is_client=False)
 
 strategy = get_kex_strategy(mode=mode)
 
+num_cpus = psutil.cpu_count(logical=True)
+
 with open(log_file, "w") as csvfile:
     writer = csv.writer(csvfile)
-    writer.writerow(["run", "mode", "duration_sec", "shared_secret_length", "cpu_percent", "ram_percent", "success", "error"])
+    writer.writerow(["run", "mode", "duration_sec", "shared_secret_length", "cpu_percent", "ram_mb", "success", "error"])
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind((HOST, PORT))
@@ -25,6 +27,8 @@ with open(log_file, "w") as csvfile:
             with conn:
                 print(f"[+] Connected to {addr}", flush=True)
                 try:
+                    process = psutil.Process(os.getpid())
+                    start_cpu = process.cpu_times()
                     start_time = time.time()
                     keys = strategy.generate_keys()
 
@@ -53,12 +57,20 @@ with open(log_file, "w") as csvfile:
 
                         shared = strategy.compute_shared_secret(client_ecdh, client_cipher)
 
-                    duration = time.time() - start_time
+                    end_time = time.time()
 
-                    cpu = psutil.cpu_percent(interval = None)
-                    ram = psutil.virtual_memory().percent
+                    duration = end_time - start_time
 
-                    writer.writerow([run, mode, str(round(duration, round_to_n_digits)), len(shared), cpu, ram, 1, ""])
+                    end_cpu = process.cpu_times()
+                    duration = end_time - start_time
+                    user_time = end_cpu.user - start_cpu.user
+                    system_time = end_cpu.system - start_cpu.system
+                    cpu_total = user_time + system_time
+                    cpu_percent = ((cpu_total / duration) * 100) / num_cpus if duration > 0 else 0
+
+                    ram_mb = process.memory_info().rss / (1024 * 1024)  # in MB
+
+                    writer.writerow([run, mode, str(round(duration, round_to_n_digits)), len(shared), cpu_percent, ram_mb, 1, ""])
                     print(f"[OK] Run {run} complete. Shared secret length: {len(shared)}", flush=True)
                 except Exception as e:
                     writer.writerow([run, mode, "", "", "", "", 0, str(e)])
