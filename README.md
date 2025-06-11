@@ -29,6 +29,11 @@ This project provides a testing framework for evaluation key exchange (KeX) mech
  - Python 3.11
  - Docker & Docker Compose
 
+ < If you're running the project natively, install the required Python packages with:
+ ```bash
+ pip install -r requirements.txt
+ ```
+
 
 
 
