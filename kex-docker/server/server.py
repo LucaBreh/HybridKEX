@@ -1,6 +1,7 @@
 import sys
 from pathlib import Path
 
+# Add /app (Root im Container) to import path so "shared" module works
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import socket
@@ -11,7 +12,9 @@ import struct
 import psutil
 import oqs
 import nacl.public
+import os
 
+# Custom shared modules
 from shared.kex_strategies import get_kex_strategy
 from shared.crypto_utils import *
 import subprocess
@@ -26,6 +29,8 @@ strategy = get_kex_strategy(mode=mode)
 
 netem_config = get_netem_params(CONFIG_PATH)
 
+num_cpus = psutil.cpu_count(logical=True)
+
 if netem_config["enabled"]:
     print("netem activated")
     set_up_netem(netem_config)
@@ -34,7 +39,7 @@ if netem_config["enabled"]:
 
 with open(log_file, "w") as csvfile:
     writer = csv.writer(csvfile)
-    writer.writerow(["run", "mode", "duration_sec", "shared_secret_length", "cpu_percent", "ram_percent", "success", "error", "netem"])
+    writer.writerow(["run", "mode", "duration_sec", "shared_secret_length", "cpu_percent", "ram_mb", "success", "error", "netem"])
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind((HOST, PORT))
@@ -46,6 +51,8 @@ with open(log_file, "w") as csvfile:
             with conn:
                 print(f"[+] Connected to {addr}", flush=True)
                 try:
+                    process = psutil.Process(os.getpid())
+                    start_cpu = process.cpu_times()
                     start_time = time.time()
                     keys = strategy.generate_keys()
 
@@ -74,16 +81,22 @@ with open(log_file, "w") as csvfile:
 
                         shared = strategy.compute_shared_secret(client_ecdh, client_cipher)
 
-                    duration = time.time() - start_time
+                    end_time = time.time()
 
-                    cpu = psutil.cpu_percent(interval = None)
-                    ram = psutil.virtual_memory().percent
+                    end_cpu = process.cpu_times()
+                    duration = end_time - start_time
+                    user_time = end_cpu.user - start_cpu.user
+                    system_time = end_cpu.system - start_cpu.system
+                    cpu_total = user_time + system_time
+                    cpu_percent = ((cpu_total / duration)* 100) / num_cpus if duration > 0 else 0
+
+                    ram_mb = process.memory_info().rss / (1024 * 1024)  # in MB
 
                     if netem_config["enabled"]:
                         writer.writerow(
-                            [run, mode, str(round(duration, round_to_n_digits)), len(shared), cpu, ram, 1,"" ,netem_config["selected"]])
+                            [run, mode, str(round(duration, round_to_n_digits)), len(shared), cpu_percent, ram_mb, 1,"" ,netem_config["selected"]])
                     else:
-                        writer.writerow([run, mode, str(round(duration, round_to_n_digits)), len(shared), cpu, ram, 1, "", netem_config["enabled"]])
+                        writer.writerow([run, mode, str(round(duration, round_to_n_digits)), len(shared), cpu_percent, ram_mb, 1, "", netem_config["enabled"]])
                     print(f"[OK] Run {run} complete. Shared secret length: {len(shared)}", flush=True)
                 except Exception as e:
                     writer.writerow([run, mode, "", "", "", "", 0, str(e), netem_config["selected"]])

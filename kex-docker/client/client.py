@@ -12,7 +12,9 @@ import struct
 import psutil
 import oqs
 import nacl.public
+import os
 
+# Custom shared modules
 from shared.kex_strategies import get_kex_strategy
 from shared.crypto_utils import *
 
@@ -22,14 +24,18 @@ runs, mode, log_file, round_to_n_digits, HOST, PORT = get_config_vars(CONFIG_PAT
 
 strategy = get_kex_strategy(mode=mode)
 
+num_cpus = psutil.cpu_count(logical=True)
+
 netem_config = get_netem_params(CONFIG_PATH)
 
 with open(log_file, "w") as csvfile:
     writer = csv.writer(csvfile)
-    writer.writerow(["run", "mode", "duration_sec", "shared_secret_length", "cpu_percent", "ram_percent", "success", "error", "netem"])
+    writer.writerow(["run", "mode", "duration_sec", "shared_secret_length", "cpu_percent", "ram_mb", "success", "error", "netem"])
 
     for run in range(1, runs + 1):
         try:
+            process = psutil.Process(os.getpid())
+            start_cpu = process.cpu_times()
             start_time = time.time()
             keys = strategy.generate_keys()
 
@@ -64,17 +70,24 @@ with open(log_file, "w") as csvfile:
                     )
                     sock.sendall(packed)
 
-            duration = time.time() - start_time
-            cpu = psutil.cpu_percent(interval=None)
-            ram = psutil.virtual_memory().percent
+            end_time = time.time()
+
+            end_cpu = process.cpu_times()
+            duration = end_time - start_time
+            user_time = end_cpu.user - start_cpu.user
+            system_time = end_cpu.system - start_cpu.system
+            cpu_total = user_time + system_time
+            cpu_percent = ((cpu_total / duration) * 100) / num_cpus if duration > 0 else 0
+
+            ram_mb = process.memory_info().rss / (1024 * 1024)
 
             if netem_config["enabled"]:
-                writer.writerow([run, mode, str(round(duration, round_to_n_digits)), len(shared), cpu, ram, 1, "", netem_config["selected"]])
+                writer.writerow([run, mode, str(round(duration, round_to_n_digits)), len(shared), cpu_percent, ram_mb, 1, "", netem_config["selected"]])
             else:
-                writer.writerow([run, mode, str(round(duration, round_to_n_digits)), len(shared), cpu, ram, 1, "", netem_config["enabled"]])
+                writer.writerow([run, mode, str(round(duration, round_to_n_digits)), len(shared), cpu_percent, ram_mb, 1, "", netem_config["enabled"]])
 
             print(f"[OK] Run {run} complete. Shared secret length: {len(shared)}")
 
         except Exception as e:
-            writer.writerow([run, mode, "", "", "", "", 0, str(e), netem_config["enabled"] + ": " + netem_config["selected"]])
+            writer.writerow([run, mode, "", "", "", "", 0, str(e), netem_config["enabled"] + ": " + str(netem_config["selected"])])
             print(f"[ERROR] Handshake {run} failed: {e}")
