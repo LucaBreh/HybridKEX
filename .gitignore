@@ -30,3 +30,4 @@ env/
 # Docker-related
 *.pid
 
+.DS
