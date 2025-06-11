@@ -29,12 +29,50 @@ This project provides a testing framework for evaluation key exchange (KeX) mech
  - Python 3.11
  - Docker & Docker Compose
 
- < If you're running the project natively, install the required Python packages with:
+ > If you're running the project natively, install the required Python packages with:
+
  ```bash
  pip install -r requirements.txt
  ```
 
+## Configuration
+Each environment uses its own `config.json` in the `shared/` directory.
 
+### Docker `config.json`
+Includes support for **network emulation**:
+
+```json
+{
+  "host": "server",
+  "port": 8443,
+  "handshake_runs": 1000,
+  "mode": {
+    "selected": "pqc",
+    "classic": "x22519",
+    "pqc": "Kyber768",
+    "hybrid": {
+      "classic": "x22519",
+      "pqc": "Kyber768"
+    }
+  },
+  "time_digits": 10,
+  "logs": {
+    ...
+    }
+  },
+  "netem": {
+    "enabled": false,
+    "selected": "netem_satelite",
+    ... # predefined network profiles
+  }
+}
+```
+
+
+## Running the Experiments
+ ```bash
+ cd kex-native
+```
 
 
 
