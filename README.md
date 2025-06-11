@@ -117,8 +117,11 @@ Navigate to `analytics/notebooks/`:
 5 experiments were conducted with various network profiles (defined in config file) on two different devices:
 
 > MacBook Pro (Model Mac16,8), Apple M4 Pro, 12-core CPU 24 GB unified memory 
+
 Find measurement data as `all_measurements_macbook.csv`
+
 > Raspberry Pi 4 Model B Rev 1.1
+
 Find measurement data as `all_measurements_raspberry.csv`
 
 ## Supported Key Exchange Modes
